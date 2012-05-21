@@ -124,7 +124,7 @@ class TwitterBotDB:
             raise RuntimeError('No users to insert. Is user_json empty?')
             self.session.rollback()
 
-    
+
     def targetuser_insert_all(self, targetusers):
         if type(targetusers) is not type([]):
             raise TypeError('targetusers should be of type list')
@@ -139,7 +139,24 @@ class TwitterBotDB:
         else:
             raise RuntimeError('No targetusers to insert.')
             self.session.rollback()
+            
+
+    def targetuser_select_by_id(id):
+        '''does_exist = exists().where(TargetUser.id==id)
+        targetuser_id = session.query(TargetUser.id).fitler(does_exists)
         
+        if user_id == targetuser_id:
+            return self.user_select_by_id(self, id)
+        else:
+            return None
+        '''
+        return self.user_select_by_id(self, id)
+        
+    def targetuser_select_by_ids_all(self, ids):
+        """Get a list of target User objects by their Twitter id's.
+        """
+        return self.user_select_by_id_all(self, ids)
+
 
     ###########################################################################
     ##                       TWITTERBOTDB TWEET API                          ##

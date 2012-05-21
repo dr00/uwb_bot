@@ -4,12 +4,17 @@ from twitterbotdb import TwitterBotDB, User, Tweet, TargetUser
 from gopherbot import GopherBot
 
 import sys
+import os
 
 _MAX_USERS_REQ = 100
 _MAX_TRIES = 5
 _ECHO = True
+_DEFAULT_LASTIDFILE = '{}{}.twitter_lastid'.format(os.environ['HOME'], os.sep)
+_DEFAULT_OAUTHFILE = '{}{}.twitter_oauth'.format(os.environ['HOME'], os.sep)
+_DEFAULT_USERNAME = 'AnOrangeEater'
 
-def init_users(twitterbotdb, targetuser_ids, limit_per_call, max_tries):
+
+def init_users(twitterbotdb, gopher, targetuser_ids, limit_per_call, max_tries):
     if not targetuser_ids:
         raise RuntimeError('No targetusers to intitialize.')
         
@@ -21,7 +26,6 @@ def init_users(twitterbotdb, targetuser_ids, limit_per_call, max_tries):
     targets = targetuser_ids
     
     # gopherbot to get twitter data, and store in twitterbotdb
-    g = GopherBot()
     db = twitterbotdb
     
     if sys.flags.debug:
@@ -73,15 +77,22 @@ if __name__ == '__main__':
     status = -1
     sys.exit(status)
 else:
-    db_name = 'sqlite:///dbtt2.sqlite'
+    db_name = 'sqlite:///db/twitterbotdb.sqlite'
     print('Initializing database engine: {} ...'.format(db_name))        
     tdb = TwitterBotDB(db_name, _ECHO)
     print('Session ready!')
-
-    didnt_makeit = init_users(tdb, targetuser_ids, _MAX_USERS_REQ, _MAX_TRIES)
+    
+    username = '@{0}'.format(_DEFAULT_USERNAME)
+    lastid_filename = _DEFAULT_LASTIDFILE
+    oauth_filename = _DEFAULT_OAUTHFILE 
+    g = GopherBot(username, lastid_filename, oauth_filename)
+    
+    init_users(tdb, g, targetuser_ids, _MAX_USERS_REQ, _MAX_TRIES)
+    
     known = [tu[0] for tu in tdb.session.query(TargetUser.id)]
     missing = [t for t in targetuser_ids if t not in known]
     if missing:
         tdb.targetuser_insert_all(missing)
-        
+    
+
 
