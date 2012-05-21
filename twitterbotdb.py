@@ -158,6 +158,23 @@ class TwitterBotDB:
         return self.user_select_by_id_all(self, ids)
 
 
+    def targetuserfollower_insert_all(self, followers):
+        if type(followers) is not type([]):
+            raise TypeError('followers should be of type list')
+
+        s = self.session
+        existing = [f for f in s.query(TargetUserFollower)]
+        tuf = [TargetUserFollower(f) for f in followers if f not in existing]
+
+        if tuf:
+            self.session.add_all(tu)
+            self.session.commit()
+            self.session.flush()
+        else:
+            raise RuntimeError('No targetusers to insert.')
+            self.session.rollback()
+
+
     ###########################################################################
     ##                       TWITTERBOTDB TWEET API                          ##
     ###########################################################################
@@ -192,7 +209,8 @@ class TwitterBotDB:
 ## GLOBALS
 ######################
 def to_datetime(datestring):
-    """Converts the datetime string to a datetime python object.
+    """
+    Converts the datetime string to a datetime python object.
     """
     time_tuple = parsedate_tz(datestring.strip())
     dt = datetime(*time_tuple[:6])
@@ -200,6 +218,9 @@ def to_datetime(datestring):
 
 
 class TargetUser(Base):
+    """
+    TargetUser class/table that represents the bots target users.
+    """
     __tablename__ = 'targetusers'
     id = Column(Integer, ForeignKey('users.id'), primary_key=True)
     
@@ -213,11 +234,100 @@ class TargetUser(Base):
         id = u.id
         name = u.name.encode('utf-8', 'ignore')
         created_at = u.created_at
-        r = "<User('{}','{}', '{}')>".format(id, name, created_at)
+        r = "<TargetUser('{}','{}', '{}')>".format(id, name, created_at)
         return r
 
 
+class TargetUserFollower(Base):
+    """
+    TargetUserFriend class/table that represents the target users followers.
+    """
+    __tablename__ = 'targetuser_followers'
+    observed_date = Column(DateTime, primary_key=True)
+    targetuser_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
+    follower_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
+    
+    targetuser = relationship('User', 
+                    primaryjoin='TargetUserFollower.targetuser_id==User.id')
+
+    follower = relationship('User',
+                    primaryjoin='TargetUserFollower.follower_id==User.id')
+    
+    def __init__(self, id, observed_date):
+        self.targetuser_id = id
+        self.follower_id = id
+        self.observed_date = observed_date
+
+    def __repr__(self):
+        tid = self.targetuser_id
+        fid = self.follower_id
+        od = self.observed_date
+        r = "<TargetUserFollower('{}','{}', '{}')>".format(tid, fid, od)
+        return r
+
+
+class TargetUserFriend(Base):
+    """
+    TargetUserFriend class/table that represents the target users friends.
+    """
+    __tablename__ = 'targetuser_friends'
+    observed_date = Column(DateTime, primary_key=True)
+    targetuser_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
+    friend_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
+        
+    targetuser = relationship('User', 
+                    primaryjoin='TargetUserFriend.targetuser_id==User.id')
+
+    follower = relationship('User',
+                    primaryjoin='TargetUserFriend.friend_id==User.id')
+
+    
+    def __init__(self, targetuser_id, friend_id, observed_date):
+        self.targetuser_id = id
+        self.friend_id = id
+        self.observed_date = observed_date
+ 
+    def __repr__(self):
+        tid = self.targetuser_id
+        fid = self.friend_id
+        od = self.observed_date
+        r = "<TargetUserFriend('{}','{}', '{}')>".format(tid, fid, od)
+        return r
+
+
+class BotUser(Base):
+    """
+    BotUser class/table that represents automated Twitter users.
+    """
+    __tablename__ = 'botusers'    
+    id = Column(Integer, ForeignKey('users.id'), primary_key=True)
+    oauth_secret = Column(String)
+    oauth_secret_token = Column(String)
+    remaining_hits = Column(Integer)
+    reset_time_in_seconds = Column(Integer)
+    hourly_limit = Column(Integer)
+    reset_time = Column(DateTime)
+        
+    user = relationship('User')
+    
+    def __init__(self, id, oauth_secret, oauth_secret_token):
+        self.targetuser_id = id
+        self.friend_id = id
+        self.observed_date = observed_date
+
+    def __repr__(self):
+        u = self.user
+        id = u.id
+        name = u.name.encode('utf-8', 'ignore')
+        created_at = u.created_at        
+        r = "<BotUser('{}','{}', '{}')>".format(id, name, created_at)
+        return r
+    
+
 class User(Base):
+    """
+    User class/table that represents users of Twitter.
+    """    
     __tablename__ = 'users'
     
     # attributes definitions
@@ -282,6 +392,9 @@ class User(Base):
 
 
 class Tweet(Base):
+    """
+    Tweet class/table that represents tweets by Twitter users.
+    """
     __tablename__ = 'tweets'
 
     id = Column(Integer, primary_key=True)

@@ -172,3 +172,4 @@ target_users = Table('target_users', Base.metadata,
 tweet_usermention_entities = Table('tweet_url_entities', Base.metadata,
     Column('tweet_id', Integer, ForeignKey('tweets.id'))
     Column('user_id', Integer, ForeignKey('users.id'))
+

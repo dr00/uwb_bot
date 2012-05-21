@@ -198,8 +198,10 @@ class GopherBot:
             api = self.get_twitter_api()
             return api.followers.ids(screen_name=screen_name)
         except TwitterHttpError, e:
-            errormsg = 'Call to Twitter followers/ids failed!\n'
-            print(errormsg)
+            #TODO: Switch to new account if we hit the rate limit
+            #errormsg = 'Call to Twitter followers/ids failed!\n'
+            #print(errormsg)
+            return None
 
 
     def save_lastid(self, lastid, lastid_filename):

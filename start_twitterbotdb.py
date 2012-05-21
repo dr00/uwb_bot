@@ -14,7 +14,7 @@ _DEFAULT_OAUTHFILE = '{}{}.twitter_oauth'.format(os.environ['HOME'], os.sep)
 _DEFAULT_USERNAME = 'AnOrangeEater'
 
 
-def init_users(twitterbotdb, gopher, targetuser_ids, limit_per_call, max_tries):
+def init_users(db, gopher, ids, limit_per_call, max_tries):
     if not targetuser_ids:
         raise RuntimeError('No targetusers to intitialize.')
         
@@ -23,10 +23,9 @@ def init_users(twitterbotdb, gopher, targetuser_ids, limit_per_call, max_tries):
     
     tries_left = max_tries
     limit = limit_per_call
-    targets = targetuser_ids
-    
-    # gopherbot to get twitter data, and store in twitterbotdb
-    db = twitterbotdb
+    targets = ids
+    s = db.session
+    g = gopher
     
     if sys.flags.debug:
         print('max_tries:     {}'.format(max_tries))
@@ -36,7 +35,7 @@ def init_users(twitterbotdb, gopher, targetuser_ids, limit_per_call, max_tries):
     # max_tries + 1 for the insertion to the database on the last iteration   
     # initialize targetuser data
     #TODO: Fix. How to do this using ORM without return trips to db?        
-    known = [u[0] for u in db.session.query(User.id)]
+    known = [u[0] for u in s.query(User.id)]
     missing = [t for t in targets if t not in known]
 
     if sys.flags.debug:
@@ -55,9 +54,9 @@ def init_users(twitterbotdb, gopher, targetuser_ids, limit_per_call, max_tries):
     while tries_left:        
         while remaining:
             for u in g.get_users(missing[:limit-1]):
-                #gopher.save_to_file(u, 'targetusers.json', 'a')
+                #g.save_to_file(u, 'targetusers.json', 'a')
                 db.user_insert_all(u)
-                known = [u[0] for u in db.session.query(User.id)]
+                known = [u[0] for u in s.query(User.id)]
                 missing = [t for t in targets if t not in known]
                 if sys.flags.debug:
                     print('tries_left:     {}'.format(tries_left))
@@ -72,6 +71,19 @@ def init_users(twitterbotdb, gopher, targetuser_ids, limit_per_call, max_tries):
         raise RuntimeError('ran out of tries.')
 
 
+"""
+def init_followers(db, gopher, names, limit_per_call, max_tries):
+    limit = limit_per_call
+    for name in names:
+        ids = gopher.get_followers(name)
+        if ids:
+            init_users(tdb, gopher, ids, limit, max_tries)
+            known = [f for f in s.query(TargetUserFollower)]
+            missing = [t for t in targetuser_ids if t not in known]
+                if missing:
+                    db.targetuser_insert_all(missing)
+
+"""
 if __name__ == '__main__':
     #status = main()
     status = -1
@@ -80,6 +92,7 @@ else:
     db_name = 'sqlite:///db/twitterbotdb.sqlite'
     print('Initializing database engine: {} ...'.format(db_name))        
     tdb = TwitterBotDB(db_name, _ECHO)
+    s = tdb.session
     print('Session ready!')
     
     username = '@{0}'.format(_DEFAULT_USERNAME)
@@ -89,10 +102,12 @@ else:
     
     init_users(tdb, g, targetuser_ids, _MAX_USERS_REQ, _MAX_TRIES)
     
-    known = [tu[0] for tu in tdb.session.query(TargetUser.id)]
+    known = [tu[0] for tu in s.query(TargetUser.id)]
     missing = [t for t in targetuser_ids if t not in known]
     if missing:
         tdb.targetuser_insert_all(missing)
     
-
+    names = [n[0] for n in s.query(User.screen_name).join(TargetUser)]
+    #init_followers(tdb, g, names, _MAX_USERS_REQ, _MAX_TRIES)
+        
 
